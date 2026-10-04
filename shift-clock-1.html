@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#16202c">
+<title>Shift Clock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#eceff3; --surface:#fbfcfd; --ink:#16202c; --muted:#5b6877; --line:#d6dce3; --soft:#e4e9ef;
+  --accent:#1f5fd1; --on-ink:#fbfcfd;
+  --ok:#1d7a4d; --ok-bg:#dcf1e5; --warn:#9a5a00; --warn-bg:#fdeccf; --danger:#b3261e;
+  --backdrop:rgba(22,32,44,.45);
+  --display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#0f141a; --surface:#171e26; --ink:#e6ecf2; --muted:#94a1af; --line:#2b3541; --soft:#212a35;
+    --accent:#7aa2ff; --on-ink:#0f141a;
+    --ok:#6fd6a2; --ok-bg:#15352a; --warn:#f2b862; --warn-bg:#3a2b13; --danger:#ff8f86;
+    --backdrop:rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0f141a; --surface:#171e26; --ink:#e6ecf2; --muted:#94a1af; --line:#2b3541; --soft:#212a35;
+  --accent:#7aa2ff; --on-ink:#0f141a;
+  --ok:#6fd6a2; --ok-bg:#15352a; --warn:#f2b862; --warn-bg:#3a2b13; --danger:#ff8f86;
+  --backdrop:rgba(0,0,0,.6);
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:15px/1.45 var(--body);padding-inline:16px;padding-block:14px 56px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.muted{color:var(--muted)}
+.label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:500}
+.num{font-variant-numeric:tabular-nums}
+
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column}
+.brand h1{font-family:var(--display);font-weight:700;font-size:28px;line-height:1;margin:0;letter-spacing:.02em;text-transform:uppercase}
+.brand span{font-size:13px;color:var(--muted)}
+.btn{padding:10px 14px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:500;line-height:1.2}
+.btn:hover{background:var(--soft)}
+.btn.primary{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+.btn.danger{color:var(--danger)}
+.btn.small{padding:7px 11px;font-size:14px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.clock{border-color:transparent;box-shadow:0 1px 2px rgba(22,32,44,.06),0 10px 30px rgba(22,32,44,.07)}
+.clock-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:4px 10px;border-radius:999px;background:var(--soft);color:var(--muted)}
+.pill.work{background:var(--ok-bg);color:var(--ok)}
+.pill.brk{background:var(--warn-bg);color:var(--warn)}
+.pill.work::before,.pill.brk::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.work::before{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.pill.work::before{animation:none}}
+.big{font-family:var(--display);font-weight:600;font-size:clamp(48px,15vw,88px);line-height:.9;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.sub{font-size:14px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:transparent;border-radius:999px;padding:8px 14px;font-weight:500;display:inline-flex;gap:8px;align-items:center}
+.chip[aria-pressed="true"]{border-color:var(--job);background:color-mix(in srgb,var(--job) 14%,transparent)}
+.addchip{border-style:dashed;color:var(--muted)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--job);flex:none}
+.btn-main{width:100%;padding:17px;border-radius:12px;border:0;background:var(--job,var(--ink));color:#fff;font-family:var(--display);font-size:clamp(20px,6vw,26px);font-weight:600;letter-spacing:.05em;text-transform:uppercase;line-height:1}
+.btn-main:active{transform:translateY(1px)}
+.btn-main.out{background:var(--ink);color:var(--on-ink)}
+.btn-main.brk{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.today{border-top:1px dashed var(--line);padding-top:12px;display:flex;flex-wrap:wrap;gap:6px 16px;font-size:14px}
+.today b{font-weight:600}
+.today .t{display:inline-flex;align-items:center;gap:6px}
+
+.sumhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;padding:6px 14px;border-radius:8px;font-weight:500;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.pnav{display:flex;align-items:center;gap:6px}
+.pnav button{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:18px;line-height:1}
+.pnav span{font-weight:600;min-width:0;text-align:center;font-size:14px}
+.sum{display:flex;flex-direction:column}
+.sum .r{display:grid;grid-template-columns:1fr auto auto;gap:4px 14px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--soft)}
+.sum .r:last-child{border-bottom:0}
+.sum .jn{display:flex;align-items:center;gap:8px;font-weight:500;min-width:0}
+.sum .jn small{color:var(--muted);font-weight:400}
+.sum .h{font-family:var(--mono);font-size:14px;text-align:right}
+.sum .p{font-family:var(--mono);font-size:14px;text-align:right;min-width:92px}
+.sum .r.total{border-top:1.5px solid var(--ink);border-bottom:0;margin-top:2px}
+.sum .r.total .jn,.sum .r.total .h,.sum .r.total .p{font-weight:600}
+.linkbtn{border:0;background:none;padding:0;font-family:var(--body);color:var(--accent);font-weight:500;font-size:13px;text-decoration:underline;text-underline-offset:2px}
+
+.loghead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.loghead h2{margin:0;font-family:var(--display);font-size:22px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.loghead .acts{display:flex;gap:8px;flex-wrap:wrap}
+.day{display:flex;flex-direction:column;gap:6px}
+.day h3{margin:0;font-size:13px;font-weight:600;color:var(--muted)}
+.shift{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:11px 12px}
+.shift:hover{background:var(--soft)}
+.shift .m{flex:1;min-width:0;display:flex;flex-direction:column}
+.shift .m span{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.shift .n{display:flex;flex-direction:column;align-items:flex-end;font-family:var(--mono);font-size:14px}
+.shift .n span{font-size:12px;color:var(--muted)}
+.empty{padding:18px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:10px}
+.banner{background:var(--warn-bg);color:var(--warn);padding:10px 12px;border-radius:10px;font-size:14px}
+
+dialog{border:0;border-radius:16px;padding:0;background:var(--surface);color:var(--ink);width:calc(100% - 32px);max-width:480px;max-height:calc(100% - 40px)}
+dialog::backdrop{background:var(--backdrop)}
+.dlg{padding:18px;display:flex;flex-direction:column;gap:12px}
+.dlg h2{margin:0;font-family:var(--display);font-size:24px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.dlg label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);font-weight:500}
+.dlg input,.dlg select,.dlg textarea{padding:10px;border:1px solid var(--line);border-radius:9px;background:var(--ground);font-size:16px;width:100%;min-width:0}
+.dlg input:disabled{opacity:.6}
+.dlg textarea{font-family:var(--mono);font-size:12px;min-height:180px;resize:vertical;white-space:pre;overflow:auto}
+.hint{margin:0;font-size:12px;color:var(--muted)}
+.quick{display:flex;gap:8px;flex-wrap:wrap;margin-top:-4px}
+.tfield{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tlbl{font-size:13px;color:var(--muted);font-weight:500}
+.tsel{display:flex;align-items:center;gap:4px}
+.tsel select{padding:10px 6px;text-align:center;font-variant-numeric:tabular-nums}
+.tsel b{color:var(--muted)}
+.dlg-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:4px}
+.grow{flex:1}
+.jobedit{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.sw{width:30px;height:30px;border-radius:50%;border:3px solid transparent;background:var(--job);padding:0}
+.sw[aria-pressed="true"]{border-color:var(--ink)}
+.sep{border:0;border-top:1px solid var(--line);margin:4px 0}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--on-ink);padding:10px 16px;border-radius:10px;font-weight:500;font-size:14px;max-width:calc(100% - 32px);z-index:10}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div class="brand"><h1>Shift Clock</h1><span id="dateline" class="num"></span></div>
+    <button class="btn" data-act="jobs">Jobs &amp; pay</button>
+  </header>
+  <div id="banner" class="banner" hidden>This browser is not saving your data right now. Copy a backup from "Jobs &amp; pay" before you close the page.</div>
+  <section class="panel clock" id="clock" aria-live="polite"></section>
+  <section class="panel">
+    <div class="sumhead">
+      <div class="seg" role="group" aria-label="Period">
+        <button data-act="mode" data-mode="week" id="segWeek">Week</button>
+        <button data-act="mode" data-mode="month" id="segMonth">Month</button>
+      </div>
+      <div class="pnav">
+        <button data-act="prev" aria-label="Previous period">&#8249;</button>
+        <span id="plabel" class="num"></span>
+        <button data-act="next" aria-label="Next period">&#8250;</button>
+      </div>
+    </div>
+    <div class="sum" id="sum"></div>
+  </section>
+  <section class="panel">
+    <div class="loghead">
+      <h2>Shifts</h2>
+      <div class="acts">
+        <button class="btn small" data-act="export">Copy for Excel</button>
+        <button class="btn small primary" data-act="add">+ Add shift</button>
+      </div>
+    </div>
+    <div id="log" style="display:flex;flex-direction:column;gap:14px"></div>
+  </section>
+</div>
+
+<dialog id="shiftDlg">
+  <form class="dlg" id="shiftForm" novalidate>
+    <h2 id="fTitle">Edit shift</h2>
+    <label for="fJob">Job<select id="fJob"></select></label>
+    <label for="fDate">Date<input type="date" id="fDate"></label>
+    <div class="quick"><button type="button" class="btn small" data-qd="0">Today</button><button type="button" class="btn small" data-qd="1">Yesterday</button><button type="button" class="btn small" data-qd="2">2 days ago</button></div>
+    <div class="row2">
+      <div class="tfield"><span class="tlbl">Start</span><div class="tsel"><select id="fStartH" aria-label="Start hour"></select><b>:</b><select id="fStartM" aria-label="Start minute"></select></div></div>
+      <div class="tfield"><span class="tlbl">End</span><div class="tsel"><select id="fEndH" aria-label="End hour"></select><b>:</b><select id="fEndM" aria-label="End minute"></select></div></div>
+    </div>
+    <p class="hint" id="fHint">If the end is earlier than the start, it counts as the next day.</p>
+    <div class="row2">
+      <label for="fBreak">Break (min)<input type="number" id="fBreak" min="0" step="1" inputmode="numeric"></label>
+      <label for="fRate">Hourly pay (kr)<input type="number" id="fRate" min="0" step="0.01" inputmode="decimal"></label>
+    </div>
+    <label for="fNote">Note<input id="fNote" maxlength="120" placeholder="Optional"></label>
+    <div class="dlg-actions">
+      <button type="button" class="btn danger" id="fDelete">Delete</button>
+      <span class="grow"></span>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="submit" class="btn primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="jobsDlg">
+  <div class="dlg">
+    <h2>Jobs &amp; pay</h2>
+    <p class="hint">Each job keeps its own hours and hourly pay. New shifts use the pay you set here.</p>
+    <div id="jobList" style="display:flex;flex-direction:column;gap:10px"></div>
+    <button class="btn" type="button" id="addJob">+ Add job</button>
+    <hr class="sep">
+    <div class="label">Backup</div>
+    <p class="hint">Your shifts are saved in this browser on this device. Copy a backup now and then, and paste it here to restore on a new phone.</p>
+    <div class="dlg-actions">
+      <button class="btn small" type="button" id="backupBtn">Copy backup</button>
+      <button class="btn small" type="button" id="restoreBtn">Restore backup</button>
+    </div>
+    <div class="dlg-actions">
+      <span class="grow"></span>
+      <button type="button" class="btn" data-close>Cancel</button>
+      <button type="button" class="btn primary" id="saveJobs">Save</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="textDlg">
+  <div class="dlg">
+    <h2 id="tTitle"></h2>
+    <p class="hint" id="tDesc"></p>
+    <label for="decSel" id="decWrap">Number format
+      <select id="decSel"><option value=".">7.50 (English Excel)</option><option value=",">7,50 (Danish Excel)</option></select>
+    </label>
+    <textarea id="tText" spellcheck="false"></textarea>
+    <div class="dlg-actions">
+      <span class="grow"></span>
+      <button type="button" class="btn" data-close>Close</button>
+      <button type="button" class="btn primary" id="tAction"></button>
+    </div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const COLORS=['#2f62d6','#0f8f8a','#c2502a','#7b4bc4','#3f7d2c','#b0791a'];
+const KEY='shift-clock-v1';
+const H=3600000, DAY=86400000;
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+function defaults(){
+  const a=uid()+'a', b=uid()+'b';
+  return {jobs:[{id:a,name:'Berlin Gemüse Döner',rate:0,color:COLORS[0],startDay:21},{id:b,name:'Wolt',rate:0,color:COLORS[1],startDay:1}],
+    shifts:[],activeId:null,selJob:a,view:{mode:'week',offset:0},dec:'.',migr1:true};
+}
+let storageOK=true;
+function load(){
+  try{
+    const r=localStorage.getItem(KEY);
+    if(r){const d=JSON.parse(r); if(d&&Array.isArray(d.jobs)&&Array.isArray(d.shifts)){
+      if(!d.migr1){d.jobs.forEach(j=>{if(j.name==='Restaurant'){j.name='Berlin Gemüse Döner';j.startDay=21}});d.migr1=true}
+      d.jobs.forEach(j=>{if(!(j.startDay>=1&&j.startDay<=28))j.startDay=1});
+      return Object.assign(defaults(),d,{view:{mode:(d.view&&d.view.mode)||'week',offset:0}});
+    }}
+    localStorage.setItem(KEY+'-test','1'); localStorage.removeItem(KEY+'-test');
+  }catch(e){storageOK=false}
+  return defaults();
+}
+let S=load();
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S)); storageOK=true}catch(e){storageOK=false}
+  $('#banner').hidden=storageOK;
+}
+
+// ---------- helpers ----------
+const pad=n=>String(n).padStart(2,'0');
+const job=id=>S.jobs.find(j=>j.id===id);
+const jobColor=id=>(job(id)||{}).color||'#6b7684';
+const jobName=id=>(job(id)||{}).name||'Deleted job';
+function worked(s,now=Date.now()){
+  const end=s.end??now; let b=s.breakMs||0;
+  if(s.breakStart) b+=end-s.breakStart;
+  return Math.max(0,end-s.start-b);
+}
+const pay=s=>worked(s)/H*(Number(s.rate)||0);
+function fmtHM(ms){const m=Math.floor(ms/60000);return `${Math.floor(m/60)}h ${pad(m%60)}m`}
+function fmtClock(ms){const t=Math.floor(ms/1000);return `${pad(Math.floor(t/3600))}:${pad(Math.floor(t/60)%60)}:${pad(t%60)}`}
+const fmtTime=ts=>{const d=new Date(ts);return `${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const fmtMoney=n=>n.toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})+' kr';
+const fmtDay=ts=>new Date(ts).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+const dateVal=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`};
+function isoWeek(d){
+  const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const day=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-day);
+  const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));
+  return Math.ceil(((t-y0)/DAY+1)/7);
+}
+function period(){
+  const n=new Date(), off=S.view.offset;
+  if(S.view.mode==='week'){
+    const s=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+    s.setDate(s.getDate()-((s.getDay()+6)%7)+7*off);
+    const e=new Date(s); e.setDate(e.getDate()+7);
+    const last=new Date(e); last.setDate(last.getDate()-1);
+    const f=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+    return {s:+s,e:+e,label:`Week ${isoWeek(s)} · ${f(s)} – ${f(last)}`,short:`Week ${isoWeek(s)}`};
+  }
+  const mixed=S.jobs.some(j=>(j.startDay||1)!==1);
+  const ref=new Date(n.getFullYear(),n.getMonth()+off,1);
+  let l=ref.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  if(mixed) l=off===0?'Current pay month':off===-1?'Previous pay month':off===1?'Next pay month':off<0?`${-off} pay months ago`:`${off} pay months ahead`;
+  return {mode:'month',label:l,short:mixed?l.toLowerCase():l};
+}
+const ordinal=n=>n+(n%10===1&&n!==11?'st':n%10===2&&n!==12?'nd':n%10===3&&n!==13?'rd':'th');
+// Period for one job. In month view each job uses its own start day (e.g. 21st to 20th).
+function jobPeriod(jobId){
+  const p=period(); if(p.mode!=='month') return p;
+  const sd=(job(jobId)||{}).startDay||1, n=new Date(), off=S.view.offset;
+  const y=n.getFullYear(), m=n.getMonth()+off, day=Math.min(n.getDate(),28);
+  let s,e;
+  if(sd===1){s=new Date(y,m,1);e=new Date(y,m+1,1)}
+  else if(day>=sd){s=new Date(y,m,sd);e=new Date(y,m+1,sd)}
+  else{s=new Date(y,m-1,sd);e=new Date(y,m,sd)}
+  const last=new Date(e); last.setDate(last.getDate()-1);
+  const f=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  return {s:+s,e:+e,range:`${f(s)} – ${f(last)}`};
+}
+const inPeriod=()=>{const c={};return S.shifts.filter(s=>{const p=c[s.jobId]||(c[s.jobId]=jobPeriod(s.jobId));return s.start>=p.s&&s.start<p.e})};
+let toastT;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>t.hidden=true,2600)}
+const active=()=>S.shifts.find(s=>s.id===S.activeId&&s.end==null)||null;
+
+// ---------- render ----------
+function renderDate(){
+  const n=new Date();
+  $('#dateline').textContent=`${n.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})} · Week ${isoWeek(n)}`;
+}
+function renderClock(){
+  const a=active(), el=$('#clock');
+  if(!S.jobs.length){
+    el.innerHTML=`<div class="clock-top"><span class="label">Now</span></div><div class="big" id="nowclock">${fmtTime(Date.now())}</div><p class="sub">Add a job first, then you can check in with one tap.</p><button class="btn-main" data-act="jobs">Add a job</button>`;
+    return;
+  }
+  if(!job(S.selJob)) S.selJob=S.jobs[0].id;
+  if(!a){
+    const j=job(S.selJob);
+    el.innerHTML=`<div class="clock-top"><span class="label">Now</span><span class="pill">Not working</span></div>
+      <div class="big" id="nowclock">${fmtTime(Date.now())}</div>
+      <div style="display:flex;flex-direction:column;gap:8px"><span class="label">Which job?</span>
+      <div class="chips" role="group" aria-label="Job">${S.jobs.map(x=>`<button class="chip" style="--job:${x.color}" data-act="sel" data-id="${x.id}" aria-pressed="${x.id===S.selJob}"><span class="dot"></span>${esc(x.name)}</button>`).join('')}<button class="chip addchip" data-act="addjob">+ Add job</button></div></div>
+      <button class="btn-main" style="--job:${j.color}" data-act="in">Check in · ${esc(j.name)}</button>
+      ${todayHTML()}`;
+  }else{
+    const onBreak=!!a.breakStart;
+    el.innerHTML=`<div class="clock-top"><span class="jn" style="display:flex;align-items:center;gap:8px;--job:${jobColor(a.jobId)};font-weight:600"><span class="dot"></span>${esc(jobName(a.jobId))}</span>
+      <span class="pill ${onBreak?'brk':'work'}">${onBreak?'On break':'Working'}</span></div>
+      <div class="big" id="elapsed">${fmtClock(worked(a))}</div>
+      <div class="sub num" id="activeSub">${activeSub(a)}</div>
+      <div class="row2">
+        <button class="btn-main brk" data-act="break">${onBreak?'End break':'Start break'}</button>
+        <button class="btn-main out" data-act="out">Check out</button>
+      </div>
+      ${todayHTML()}`;
+  }
+}
+function activeSub(a){
+  const b=(a.breakMs||0)+(a.breakStart?Date.now()-a.breakStart:0);
+  let t=`Checked in ${fmtTime(a.start)}`;
+  if(b>=60000||a.breakStart) t+=` · break ${Math.floor(b/60000)}m`;
+  if(Number(a.rate)>0) t+=` · ${fmtMoney(pay(a))}`;
+  return t;
+}
+function todayHTML(){
+  const d=new Date(), s=+new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const list=S.shifts.filter(x=>x.start>=s&&x.start<s+DAY);
+  if(!list.length) return `<div class="today" id="today"><span class="muted">Today: no hours yet</span></div>`;
+  const by={}; list.forEach(x=>by[x.jobId]=(by[x.jobId]||0)+worked(x));
+  return `<div class="today num" id="today"><span class="muted">Today</span>${Object.keys(by).map(id=>`<span class="t" style="--job:${jobColor(id)}"><span class="dot"></span>${esc(jobName(id))} <b>${fmtHM(by[id])}</b></span>`).join('')}</div>`;
+}
+function renderSummary(){
+  const p=period(); $('#plabel').textContent=p.label;
+  $('#segWeek').setAttribute('aria-pressed',S.view.mode==='week');
+  $('#segMonth').setAttribute('aria-pressed',S.view.mode==='month');
+  const list=inPeriod(p); const by={};
+  list.forEach(s=>{const o=by[s.jobId]||(by[s.jobId]={ms:0,pay:0,n:0});o.ms+=worked(s);o.pay+=pay(s);o.n++});
+  const ids=[...S.jobs.map(j=>j.id),...Object.keys(by).filter(id=>!job(id))];
+  let tm=0,tp=0;
+  const rows=ids.map(id=>{
+    const o=by[id]||{ms:0,pay:0,n:0}; tm+=o.ms; tp+=o.pay;
+    const j=job(id); const noRate=j&&!(Number(j.rate)>0);
+    return `<div class="r" style="--job:${jobColor(id)}"><span class="jn"><span class="dot"></span><span>${esc(jobName(id))} <small>${o.n} shift${o.n===1?'':'s'}${j&&Number(j.rate)>0?` · ${fmtMoney(Number(j.rate))}/h`:''}${S.view.mode==='month'&&j?` · ${jobPeriod(id).range}`:''}</small></span></span>
+      <span class="h">${fmtHM(o.ms)}</span>
+      <span class="p">${noRate&&o.pay===0?`<button class="linkbtn" data-act="jobs">Set pay</button>`:fmtMoney(o.pay)}</span></div>`;
+  }).join('');
+  $('#sum').innerHTML=rows+`<div class="r total"><span class="jn">Total</span><span class="h">${fmtHM(tm)}</span><span class="p">${fmtMoney(tp)}</span></div>`;
+}
+function renderLog(){
+  const p=period(); const list=inPeriod(p).sort((a,b)=>b.start-a.start);
+  if(!list.length){$('#log').innerHTML=`<div class="empty">No shifts in this ${S.view.mode} yet. Check in above, or add a shift you forgot.</div>`;return}
+  const groups=[]; let cur=null;
+  list.forEach(s=>{const k=dateVal(s.start); if(!cur||cur.k!==k){cur={k,ts:s.start,items:[]};groups.push(cur)} cur.items.push(s)});
+  $('#log').innerHTML=groups.map(g=>`<div class="day"><h3>${fmtDay(g.ts)}</h3>${g.items.map(s=>{
+    const run=s.end==null; const b=Math.round((s.breakMs||0)/60000);
+    const rate=Number(s.rate)>0;
+    return `<button class="shift" style="--job:${jobColor(s.jobId)}" data-act="edit" data-id="${s.id}"><span class="dot"></span>
+      <span class="m"><b>${esc(jobName(s.jobId))}</b><span class="num">${fmtTime(s.start)} – ${run?'now':fmtTime(s.end)}${b?` · break ${b}m`:''}${s.note?` · ${esc(s.note)}`:''}</span></span>
+      <span class="n"><b>${fmtHM(worked(s))}</b><span>${run?'running':(rate?fmtMoney(pay(s)):'no pay set')}</span></span></button>`}).join('')}</div>`).join('');
+}
+function render(){renderDate();renderClock();renderSummary();renderLog();$('#banner').hidden=storageOK}
+
+// live tick
+let lastMin=-1;
+setInterval(()=>{
+  const a=active(), now=new Date();
+  if(a){const e=$('#elapsed'); if(e) e.textContent=fmtClock(worked(a)); const sub=$('#activeSub'); if(sub) sub.textContent=activeSub(a);}
+  else{const c=$('#nowclock'); if(c) c.textContent=fmtTime(+now);}
+  if(now.getMinutes()!==lastMin){lastMin=now.getMinutes(); if(!document.querySelector('dialog[open]')){renderDate();renderSummary();renderLog();const t=$('#today');if(t)t.outerHTML=todayHTML();}}
+},1000);
+
+// ---------- actions ----------
+function checkIn(){
+  if(active()) return;
+  const j=job(S.selJob); if(!j) return;
+  const s={id:uid(),jobId:j.id,start:Date.now(),end:null,breakMs:0,breakStart:null,rate:Number(j.rate)||0,note:''};
+  S.shifts.push(s); S.activeId=s.id; save(); render();
+  toast(`Checked in to ${j.name} at ${fmtTime(s.start)}`);
+}
+function toggleBreak(){
+  const a=active(); if(!a) return; const now=Date.now();
+  if(a.breakStart){a.breakMs=(a.breakMs||0)+now-a.breakStart;a.breakStart=null;toast('Break ended')}
+  else{a.breakStart=now;toast('Break started')}
+  save(); render();
+}
+function checkOut(){
+  const a=active(); if(!a) return; const now=Date.now();
+  if(a.breakStart){a.breakMs=(a.breakMs||0)+now-a.breakStart;a.breakStart=null}
+  a.end=now; S.activeId=null; save(); render();
+  toast(`Checked out · ${fmtHM(worked(a))} at ${jobName(a.jobId)}`);
+}
+
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-close]'); if(c){c.closest('dialog').close();return}
+  const b=e.target.closest('[data-act]'); if(!b) return;
+  const act=b.dataset.act;
+  if(act==='sel'){S.selJob=b.dataset.id;save();renderClock()}
+  else if(act==='in') checkIn();
+  else if(act==='break') toggleBreak();
+  else if(act==='out') checkOut();
+  else if(act==='mode'){S.view.mode=b.dataset.mode;S.view.offset=0;save();renderSummary();renderLog()}
+  else if(act==='prev'||act==='next'){S.view.offset+=act==='prev'?-1:1;renderSummary();renderLog()}
+  else if(act==='edit') openShift(b.dataset.id);
+  else if(act==='add') openShift(null);
+  else if(act==='jobs') openJobs();
+  else if(act==='addjob'){openJobs();$('#addJob').click()}
+  else if(act==='export') openExport();
+});
+
+// ---------- shift dialog ----------
+let editing=null, orig={}, delArm=false, delT;
+['fStartH','fEndH'].forEach(id=>{$('#'+id).innerHTML=Array.from({length:24},(_,h)=>`<option value="${h}">${pad(h)}</option>`).join('')});
+['fStartM','fEndM'].forEach(id=>{$('#'+id).innerHTML=Array.from({length:60},(_,m)=>`<option value="${m}">${pad(m)}</option>`).join('')});
+const setT=(p,ts)=>{const d=new Date(ts);$('#'+p+'H').value=d.getHours();$('#'+p+'M').value=d.getMinutes()};
+const getT=p=>`${pad(Number($('#'+p+'H').value))}:${pad(Number($('#'+p+'M').value))}`;
+$('.quick').addEventListener('click',e=>{
+  const b=e.target.closest('[data-qd]'); if(!b) return;
+  const d=new Date(); d.setDate(d.getDate()-Number(b.dataset.qd)); $('#fDate').value=dateVal(+d);
+});
+function openShift(id){
+  if(!S.jobs.length){openJobs();return}
+  const s=id?S.shifts.find(x=>x.id===id):null; editing=s;
+  const run=s&&s.end==null;
+  $('#fTitle').textContent=s?'Edit shift':'Add shift';
+  $('#fJob').innerHTML=S.jobs.map(j=>`<option value="${j.id}">${esc(j.name)}</option>`).join('')+(s&&!job(s.jobId)?`<option value="${s.jobId}">Deleted job</option>`:'');
+  let start, end;
+  if(s){start=s.start;end=s.end}else{const n=new Date();n.setMinutes(0,0,0);end=+n;start=end-4*H}
+  $('#fJob').value=s?s.jobId:S.selJob;
+  $('#fDate').value=dateVal(start);
+  setT('fStart',start); setT('fEnd',run?start:end);
+  $('#fEndH').disabled=!!run; $('#fEndM').disabled=!!run;
+  $('#fHint').textContent=run?'This shift is still running. Check out on the main screen to end it.':'If the end is earlier than the start, it counts as the next day.';
+  $('#fBreak').value=s?Math.round((s.breakMs||0)/60000):0;
+  $('#fRate').value=s?(Number(s.rate)||0):(Number((job(S.selJob)||{}).rate)||0);
+  $('#fNote').value=s?(s.note||''):'';
+  orig={date:$('#fDate').value,start:getT('fStart'),end:run?'':getT('fEnd'),brk:$('#fBreak').value};
+  $('#fDelete').hidden=!s; resetDel();
+  $('#shiftDlg').showModal();
+}
+$('#fJob').addEventListener('change',()=>{ if(!editing){$('#fRate').value=Number((job($('#fJob').value)||{}).rate)||0} });
+function resetDel(){delArm=false;$('#fDelete').textContent='Delete';clearTimeout(delT)}
+$('#fDelete').addEventListener('click',()=>{
+  if(!editing) return;
+  if(!delArm){delArm=true;$('#fDelete').textContent='Tap again to delete';delT=setTimeout(resetDel,3000);return}
+  S.shifts=S.shifts.filter(x=>x!==editing); if(S.activeId===editing.id) S.activeId=null;
+  save(); $('#shiftDlg').close(); render(); toast('Shift deleted');
+});
+$('#shiftForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const run=editing&&editing.end==null;
+  const dv=$('#fDate').value, sv=getT('fStart'), ev=run?'':getT('fEnd');
+  if(!dv){toast('Pick a date');return}
+  const [y,m,d]=dv.split('-').map(Number), [sh,sm]=sv.split(':').map(Number);
+  const dateSame=editing&&dv===orig.date&&sv===orig.start;
+  let start=dateSame?editing.start:new Date(y,m-1,d,sh,sm).getTime();
+  let end=null;
+  if(!run){
+    if(editing&&dateSame&&ev===orig.end&&editing.end!=null){end=editing.end}
+    else{const [eh,em]=ev.split(':').map(Number); const base=new Date(y,m-1,d); end=new Date(y,m-1,d,eh,em).getTime(); if(end<=start) end=new Date(base.getFullYear(),base.getMonth(),base.getDate()+1,eh,em).getTime();}
+  }
+  const brkMin=Math.max(0,Number($('#fBreak').value)||0);
+  const breakMs=(editing&&$('#fBreak').value===orig.brk)?(editing.breakMs||0):brkMin*60000;
+  if(end!=null&&end-start<=breakMs){toast('The break is longer than the shift');return}
+  if(end!=null&&end-start>=24*H){toast('Check the start and end time');return}
+  if(run&&start>Date.now()){toast('Start time is in the future');return}
+  const data={jobId:$('#fJob').value,start,breakMs,rate:Math.max(0,Number($('#fRate').value)||0),note:$('#fNote').value.trim()};
+  if(editing){Object.assign(editing,data); if(!run) editing.end=end}
+  else S.shifts.push(Object.assign({id:uid(),end,breakStart:null},data));
+  save(); $('#shiftDlg').close(); render(); toast(editing?'Shift updated':'Shift added');
+});
+
+// ---------- jobs dialog ----------
+let draft=[], jobDel={};
+function openJobs(){
+  draft=S.jobs.map(j=>Object.assign({},j)); jobDel={};
+  if(!draft.length) draft.push({id:uid(),name:'',rate:0,color:COLORS[0],isNew:true});
+  drawJobs(); $('#jobsDlg').showModal();
+}
+function drawJobs(){
+  $('#jobList').innerHTML=draft.map((j,i)=>{
+    const n=S.shifts.filter(s=>s.jobId===j.id).length;
+    return `<div class="jobedit" data-i="${i}">
+      <div class="row2">
+        <label for="jn-${j.id}">Job name<input id="jn-${j.id}" data-f="name" value="${esc(j.name)}" maxlength="30" placeholder="e.g. Wolt"></label>
+        <label for="jr-${j.id}">Hourly pay (kr)<input id="jr-${j.id}" data-f="rate" type="number" min="0" step="0.01" inputmode="decimal" value="${Number(j.rate)||''}" placeholder="0"></label>
+      </div>
+      <label for="jd-${j.id}">Month is counted
+        <select id="jd-${j.id}" data-f="startDay">${Array.from({length:28},(_,k)=>k+1).map(d=>`<option value="${d}"${d===(j.startDay||1)?' selected':''}>${d===1?'1st to end of month (normal month)':`${ordinal(d)} to ${ordinal(d-1)} of next month`}</option>`).join('')}</select>
+      </label>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="swatches" role="group" aria-label="Color">${COLORS.map(c=>`<button type="button" class="sw" style="--job:${c}" data-sw="${c}" aria-label="Color" aria-pressed="${c===j.color}"></button>`).join('')}</div>
+        <button type="button" class="btn small danger" data-deljob="${i}">${jobDel[j.id]?`Tap again${n?` (deletes ${n} shift${n===1?'':'s'})`:''}`:'Remove'}</button>
+      </div></div>`}).join('');
+}
+$('#jobList').addEventListener('input',e=>{
+  const f=e.target.dataset.f; if(!f) return;
+  const i=+e.target.closest('.jobedit').dataset.i; draft[i][f]=f==='startDay'?Number(e.target.value):e.target.value;
+});
+$('#jobList').addEventListener('click',e=>{
+  const sw=e.target.closest('[data-sw]');
+  if(sw){const i=+sw.closest('.jobedit').dataset.i; draft[i].color=sw.dataset.sw; drawJobs(); return}
+  const d=e.target.closest('[data-deljob]');
+  if(d){const i=+d.dataset.deljob, j=draft[i];
+    if(S.activeId&&active()&&active().jobId===j.id){toast('Check out of this job first');return}
+    if(!jobDel[j.id]){jobDel[j.id]=true;drawJobs();setTimeout(()=>{jobDel[j.id]=false;if($('#jobsDlg').open&&draft.includes(j))drawJobs()},3000);return}
+    draft.splice(i,1); j.removed=true; (draft.removedIds||(draft.removedIds=[])).push(j.id); drawJobs();
+  }
+});
+$('#addJob').addEventListener('click',()=>{
+  const used=draft.map(j=>j.color); const c=COLORS.find(x=>!used.includes(x))||COLORS[draft.length%COLORS.length];
+  draft.push({id:uid(),name:'',rate:0,color:c,startDay:1}); drawJobs();
+  const ins=$('#jobList').querySelectorAll('input[data-f="name"]'); ins[ins.length-1].focus();
+});
+$('#saveJobs').addEventListener('click',()=>{
+  const clean=draft.filter(j=>String(j.name).trim()).map(j=>({id:j.id,name:String(j.name).trim(),rate:Math.max(0,Number(j.rate)||0),color:j.color,startDay:Math.min(28,Math.max(1,Number(j.startDay)||1))}));
+  const removed=(draft.removedIds||[]);
+  if(removed.length){S.shifts=S.shifts.filter(s=>!removed.includes(s.jobId))}
+  clean.forEach(j=>{ if(j.rate>0) S.shifts.forEach(s=>{ if(s.jobId===j.id&&!(Number(s.rate)>0)) s.rate=j.rate }) });
+  S.jobs=clean; if(!job(S.selJob)&&clean.length) S.selJob=clean[0].id;
+  save(); $('#jobsDlg').close(); render(); toast('Jobs saved');
+});
+
+// ---------- text dialog (export / backup / restore) ----------
+let tMode='export';
+function tsvFor(p,dec){
+  const num=(n,dp)=>n.toFixed(dp).replace('.',dec);
+  const rows=[['Date','Day','Job','Start','End','Break (min)','Hours','Hourly pay (kr)','Pay (kr)','Note'].join('\t')];
+  const list=inPeriod(p).sort((a,b)=>a.start-b.start); const by={};
+  list.forEach(s=>{
+    const h=worked(s)/H; const o=by[s.jobId]||(by[s.jobId]={h:0,p:0}); o.h+=h; o.p+=pay(s);
+    const d=new Date(s.start);
+    rows.push([dateVal(s.start),d.toLocaleDateString('en-GB',{weekday:'short'}),jobName(s.jobId),fmtTime(s.start),s.end==null?'running':fmtTime(s.end),Math.round((s.breakMs||0)/60000),num(h,2),num(Number(s.rate)||0,2),num(pay(s),2),(s.note||'').replace(/\s+/g,' ')].join('\t'));
+  });
+  rows.push('');
+  Object.keys(by).forEach(id=>rows.push(['Total','',jobName(id),'','','',num(by[id].h,2),'',num(by[id].p,2),''].join('\t')));
+  const th=Object.values(by).reduce((a,o)=>a+o.h,0), tp=Object.values(by).reduce((a,o)=>a+o.p,0);
+  rows.push(['Total','','All jobs','','','',num(th,2),'',num(tp,2),''].join('\t'));
+  return rows.join('\n');
+}
+function openExport(){
+  tMode='export'; const p=period();
+  $('#tTitle').textContent='Copy for Excel';
+  $('#tDesc').textContent=`All shifts in ${p.mode==='month'&&p.short!==p.label?'the '+p.short+' (each job uses its own dates)':p.short}. Copy, then paste into cell A1 of an empty Excel sheet. Change the period on the main screen to copy another week or month.`;
+  $('#decWrap').hidden=false; $('#decSel').value=S.dec||'.';
+  $('#tText').readOnly=true; $('#tText').value=tsvFor(p,S.dec||'.');
+  $('#tAction').textContent='Copy'; $('#textDlg').showModal();
+}
+$('#decSel').addEventListener('change',()=>{S.dec=$('#decSel').value;save();$('#tText').value=tsvFor(period(),S.dec)});
+$('#backupBtn').addEventListener('click',()=>{
+  $('#jobsDlg').close(); tMode='backup';
+  $('#tTitle').textContent='Backup';
+  $('#tDesc').textContent='Copy this text and keep it somewhere safe, for example in a note or an email to yourself.';
+  $('#decWrap').hidden=true; $('#tText').readOnly=true;
+  $('#tText').value=JSON.stringify({app:'shift-clock',v:1,savedAt:new Date().toISOString(),jobs:S.jobs,shifts:S.shifts,activeId:S.activeId});
+  $('#tAction').textContent='Copy'; $('#textDlg').showModal();
+});
+$('#restoreBtn').addEventListener('click',()=>{
+  $('#jobsDlg').close(); tMode='restore';
+  $('#tTitle').textContent='Restore backup';
+  $('#tDesc').textContent='Paste your backup text below. This replaces the jobs and shifts on this device.';
+  $('#decWrap').hidden=true; $('#tText').readOnly=false; $('#tText').value='';
+  $('#tAction').textContent='Restore'; $('#textDlg').showModal(); $('#tText').focus();
+});
+async function copyText(t){
+  try{await navigator.clipboard.writeText(t);toast('Copied');return}catch(e){}
+  const ta=$('#tText'); ta.focus(); ta.select();
+  try{ if(document.execCommand('copy')){toast('Copied');return} }catch(e){}
+  toast('Text selected. Use your phone\'s Copy.');
+}
+$('#tAction').addEventListener('click',()=>{
+  if(tMode!=='restore'){copyText($('#tText').value);return}
+  try{
+    const d=JSON.parse($('#tText').value.trim());
+    if(!d||!Array.isArray(d.jobs)||!Array.isArray(d.shifts)) throw 0;
+    S.jobs=d.jobs; S.shifts=d.shifts; S.activeId=d.activeId||null; S.selJob=(d.jobs[0]||{}).id||null;
+    save(); $('#textDlg').close(); render(); toast(`Restored ${d.shifts.length} shifts`);
+  }catch(e){toast('That text is not a Shift Clock backup')}
+});
+
+render();
+})();
+</script>
+
+</body>
+</html>
